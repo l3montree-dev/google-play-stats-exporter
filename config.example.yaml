@@ -1,0 +1,3 @@
+google_play:
+  path_to_service_account_json: /home/timbastin/Schreibtisch/l3montree/stats-exporter/service_account.json
+  cloud_storage_bucket: pubsite_prod_xxxx
