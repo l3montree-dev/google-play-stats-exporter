@@ -17,6 +17,5 @@ def download_all_stats(stats_dir, path_to_service_account_json, cloud_storage_bu
             blobPath = os.path.dirname(blob.name)
             subpath = os.path.join(stats_dir, blobPath)
             os.makedirs(subpath, exist_ok=True)
-            fullpath = os.path.join(
-                os.path.dirname(__file__), "..", "stats", blob.name)
+            fullpath = os.path.join(stats_dir, blob.name)
             b.download_to_filename(fullpath)
