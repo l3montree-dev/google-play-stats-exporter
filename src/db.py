@@ -1,10 +1,11 @@
 import sqlalchemy
 from sqlalchemy.orm import declarative_base
+import model
 
 
-Base = declarative_base()
-
-
-def connect_to_db():
+def connect_to_db(user, password, host, port, db):
     engine = sqlalchemy.create_engine(
-        'dialect+driver://user:pass@host:port/db')
+        'mysql+mysqldb://{user}:{password}@{host}:{port}/{db}'.format(user=user, password=password, host=host, port=port, db=db))
+    session = sqlalchemy.orm.sessionmaker()
+    session.configure(bind=engine)
+    model.Base.metadata.create_all(engine)
