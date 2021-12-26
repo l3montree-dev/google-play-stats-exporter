@@ -26,8 +26,8 @@ It should match the following scheme:
 ```yaml
 google_play:
   id: de.stamplab
-  path_to_service_account_json: /home/timbastin/Schreibtisch/l3montree/stats-exporter/service_account.json
-  cloud_storage_bucket: pubsite_prod_8729964373865066144
+  path_to_service_account_json: /path/to/service_account.json
+  cloud_storage_bucket: pubsite_prod_xxxxx
 
 db:
   user: exporter
