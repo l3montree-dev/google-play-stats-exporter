@@ -7,34 +7,29 @@ from google_play import GooglePlayDownloader
 from model import Crash, Install, Rating
 from log import logger
 from builder import InstallBuilder, RatingBuilder, CrashBuilder
+from dotenv import load_dotenv
 
 
-def read_config():
-    with open(os.path.join(os.path.dirname(__file__), "../config.yaml")) as config_file:
-        return yaml.safe_load(config_file)
+load_dotenv()
 
 
 def start_export():
     # directory to temporary place all csv files.
     stats_dir = os.path.join(os.path.dirname(__file__), "..", "tmp")
-    config = read_config()
-    google_play_config = config["google_play"]
-    db_config = config["db"]
-
     # init the db session.
     db_handler = db.DbHandler(
-        db_config["user"],
-        db_config["password"],
-        db_config["host"],
-        db_config["port"],
-        db_config["database_name"]
+        os.getenv("DB_USER"),
+        os.getenv("DB_PASSWORD"),
+        os.getenv("DB_HOST"),
+        os.getenv("DB_PORT"),
+        os.getenv("DB_DATABASENAME")
     )
 
     downloader = GooglePlayDownloader(
-        google_play_config["id"],
+        os.getenv("GOOGLE_PLAY_APP_ID"),
         stats_dir,
-        google_play_config["path_to_service_account_json"],
-        google_play_config["cloud_storage_bucket"]
+        os.getenv("PATH_TO_SERVICE_ACCOUNT_JSON"),
+        os.getenv("CLOUD_STORAGE_BUCKET_URL")
     )
 
     logger.info("start syncing")
