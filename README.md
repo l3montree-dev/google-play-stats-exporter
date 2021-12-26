@@ -1,4 +1,4 @@
-# Stats-Exporter
+# Google Play Console Statistics Exporter
 
 The Stats-Exporter is a python script which downloads statistics from the `Google Play Console` and synchronizes them with a MySQL Database.
 
