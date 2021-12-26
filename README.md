@@ -53,3 +53,30 @@ Afterwards, call the script with:
 ```sh
 python ./src/main.py
 ```
+
+## Example Queries
+
+To resemble the dashboard provided by google in `grafana` the following example sql queries can be used:
+
+```sql
+SELECT date AS time, daily_user_installs AS value, "daily user installs" AS metric 
+FROM installs 
+WHERE $__timeFilter(date)
+```
+
+```sql
+SELECT date AS time, daily_user_uninstalls AS value, "daily user uninstalls" AS metric 
+FROM installs 
+WHERE $__timeFilter(date)
+```
+
+
+This query provides a moving average to the installation events. Google uses a 30 Day moving average. This can be easily customized using a numeric dashboard variable.
+```sql
+SELECT
+  date AS time,
+  "moving average" AS metric,
+  AVG (daily_user_installs) OVER (ORDER BY date RANGE INTERVAL 30 DAY PRECEDING) AS value
+FROM installs 
+WHERE$__timeFilter(date)
+```
