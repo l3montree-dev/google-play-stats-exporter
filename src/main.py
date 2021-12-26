@@ -4,8 +4,9 @@ import os
 import db
 import csv
 from google_play import GooglePlayDownloader
-from model import Crash, Install
+from model import Crash, Install, Rating
 from log import logger
+from builder import InstallBuilder, RatingBuilder, CrashBuilder
 
 
 def read_config():
@@ -37,8 +38,16 @@ def start_export():
     )
 
     logger.info("start syncing")
-    db_handler.sync_stats(downloader.download_all_since_last_synced(
-        db_handler.get_last_date_synced()))
+    for builder in [InstallBuilder(), CrashBuilder(), RatingBuilder()]:
+        logger.info("starting iteration for builder: {}".format(
+            builder.get_prefix()))
+        db_handler.sync_stats(
+            downloader.download_all_since_last_synced(
+                db_handler.get_last_date_synced(builder),
+                builder,
+            ),
+            builder
+        )
 
 
 if __name__ == "__main__":

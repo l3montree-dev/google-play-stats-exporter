@@ -1,5 +1,6 @@
 import json
-from typing import Union
+from logging import log
+from typing import Optional, Union
 from google.cloud import storage
 import os
 from datetime import date, datetime
@@ -7,6 +8,7 @@ from dateutil.relativedelta import relativedelta
 from google.cloud.storage.bucket import Bucket, Blob
 from log import logger
 from utils import Utils
+from builder import Builder
 
 
 class GooglePlayDownloader():
@@ -44,7 +46,7 @@ class GooglePlayDownloader():
         self.cloud_storage_bucket = cloud_storage_bucket
         self.bucket = self._get_bucket()
 
-    def download_all_since_last_synced(self, last_synced_date: date) -> list[str]:
+    def download_all_since_last_synced(self, last_synced_date: date, builder: Builder) -> list[str]:
         """
         downloads all stats since the last time it was synced.
         returns the directory where the new csv files are stored.
@@ -52,7 +54,7 @@ class GooglePlayDownloader():
 
         if last_synced_date == None:
             logger.info("Never synced. Syncing all stats")
-            return self.download_all_stats()
+            return self.download_all_stats(builder)
 
         today = date.today()
         current = last_synced_date
@@ -63,9 +65,9 @@ class GooglePlayDownloader():
         while current <= today:
             logger.info("downloading: {}".format(
                 current.strftime("%Y-%m")))
-            stats = self.download_stat_of_date(current, session_dir)
-            if len(stats) > 0:
-                downloaded_files += stats
+            stat = self.download_stat_of_date(current, session_dir, builder)
+            if stat:
+                downloaded_files.append(stat)
             current += relativedelta(months=1)
 
         return downloaded_files
@@ -82,26 +84,23 @@ class GooglePlayDownloader():
         os.makedirs(dirname, exist_ok=True)
         return dirname
 
-    def download_stat_of_date(self, date: date, download_to: str) -> list[str]:
-        prefixes = ["crashes", "installs", "ratings"]
+    def download_stat_of_date(self, date: date, download_to: str, builder: Builder) -> Optional[str]:
         # predict the name of the today stat
         date_str = GooglePlayDownloader.date_to_google_cloud_str(date)
-        downloaded_files = []
-        for prefix in prefixes:
-            looking_for_stat = "stats/{prefix}/{prefix}_{app_id}_{date}_overview.csv".format(
-                prefix=prefix, app_id=self.app_id, date=date_str)
-            try:
-                logger.info("looking for stat: {}".format(looking_for_stat))
-                blob = self.bucket.get_blob(looking_for_stat)
-                filename = os.path.join(download_to, blob.name)
-                os.makedirs(os.path.dirname(filename), exist_ok=True)
-                logger.info("downloading: {} to {}".format(
-                    looking_for_stat, filename))
-                blob.download_to_filename(filename)
-                downloaded_files.append(filename)
-            except (Exception) as e:
-                logger.warn(e)
-        return downloaded_files
+        looking_for_stat = "stats/{prefix}/{prefix}_{app_id}_{date}_overview.csv".format(
+            prefix=builder.get_prefix(), app_id=self.app_id, date=date_str)
+        try:
+            logger.info("looking for stat: {}".format(looking_for_stat))
+            blob = self.bucket.get_blob(looking_for_stat)
+            filename = os.path.join(download_to, blob.name)
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            logger.info("downloading: {} to {}".format(
+                looking_for_stat, filename))
+            blob.download_to_filename(filename)
+            return filename
+        except (Exception) as e:
+            logger.warn(e)
+            return None
 
     def _get_earliest_stat(self) -> Union[date, None]:
         blobs: list[Blob] = self.bucket.list_blobs()
@@ -117,19 +116,22 @@ class GooglePlayDownloader():
                     earliest_date = current_date
         return earliest_date
 
-    def download_all_stats(self) -> list[str]:
+    def download_all_stats(self, builder: Builder) -> list[str]:
         blobs = self.bucket.list_blobs()
         session_dir = self._create_session_dir()
         downloaded_files = []
 
+        logger.info(self.app_id)
         for blob in blobs:
             # only download overview names
-            if "overview" in blob.name:
+            if "overview" in blob.name and builder.get_prefix() in blob.name and self.app_id in blob.name:
                 b = self.bucket.get_blob(blob.name)
                 blobPath = os.path.dirname(blob.name)
-                subpath = os.path.join(self.stats_dir, blobPath)
+                subpath = os.path.join(session_dir, blobPath)
                 os.makedirs(subpath, exist_ok=True)
                 fullpath = os.path.join(session_dir, blob.name)
+                logger.info("downloading: {} to {}".format(
+                    blob.name, fullpath))
                 b.download_to_filename(fullpath)
                 downloaded_files.append(fullpath)
         return downloaded_files

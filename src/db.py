@@ -6,6 +6,7 @@ import model
 from datetime import datetime
 from log import logger
 import csv
+from builder import Builder
 
 
 class DbHandler():
@@ -25,31 +26,26 @@ class DbHandler():
         model.Base.metadata.create_all(engine)
         self.session = session
 
-    def get_last_date_synced(self) -> Optional[datetime]:
+    def get_last_date_synced(self, m: Builder) -> Optional[datetime]:
         with self.session() as s:
-            install = s.query(model.Install).order_by(
-                model.Install.date.desc()).first()
+            latest_model = s.query(m.get_model()).order_by(
+                m.get_model().date.desc()).first()
 
-            if install == None:
+            if latest_model == None:
                 return None
-            return install.date
+            return latest_model.date
 
-    def sync_stats(self, stats: list[str]):
-        # installs, crashes, ratings
+    def sync_stats(self, stats: list[str], builder: Builder):
         with self.session() as s:
             for el in stats:
-
-                if "installs" in el or "crashes" in el:
-                    with open(el, encoding="utf-16") as f:
-                        for row in csv.DictReader(f, skipinitialspace=True):
-                            m = model.build_install_from_csv_row(
-                                row) if "installs" in el else model.build_crash_from_csv_row(row)
-
-                            s.add(m)
-                            try:
-                                s.commit()
-                                logger.info("added: {}".format(el))
-                            except (Exception) as e:
-                                s.rollback()
-                                logger.warn(
-                                    "error during sql commit phase: {}".format(str(e.args[0])))
+                with open(el, encoding="utf-16") as f:
+                    for row in csv.DictReader(f, skipinitialspace=True):
+                        m = builder.build_from_csv_row(row)
+                        s.merge(m)
+                        try:
+                            s.commit()
+                            logger.info("added: {}".format(el))
+                        except (Exception) as e:
+                            s.rollback()
+                            logger.warn(
+                                "error during sql commit phase: {}".format(str(e.args[0])))
