@@ -1,5 +1,5 @@
 import json
-from logging import log
+from logging import error, log
 from typing import Optional, Union
 from google.cloud import storage
 import os
@@ -57,18 +57,23 @@ class GooglePlayDownloader():
             return self.download_all_stats(builder)
 
         today = date.today()
+
         current = last_synced_date
 
         session_dir = self._create_session_dir()
 
         downloaded_files: list[str] = []
-        while current <= today:
+
+        logger.info("Iterating from: {} to {}".format(
+            str(current), str(today)))
+        while current.year < today.year or current.month <= today.month:
             logger.info("downloading: {}".format(
                 current.strftime("%Y-%m")))
             stat = self.download_stat_of_date(current, session_dir, builder)
             if stat:
                 downloaded_files.append(stat)
             current += relativedelta(months=1)
+            logger.info("next iteration: {}".format(str(current)))
 
         return downloaded_files
 
